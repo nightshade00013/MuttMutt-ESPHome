@@ -1,0 +1,188 @@
+# =========================================================================
+# PROJECT: MuttMutt Home - ATM90E32 Energy Monitor
+# PURPOSE: Real-time Power Monitoring for Grid and Solar
+# This is designed to work with the CircuitSetup.us 4 channel Energy Meter
+# https://circuitsetup.us/product/split-single-phase-real-time-whole-house-energy-meter-solar-kit-2-energy-meters-programmed-esp32-4-cts/?v=0b3b97fa6688
+# You may need to calibrate your voltages based on the power supply used.
+# There will be a calibration help prompt included with the repository.
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+# =========================================================================
+
+substitutions:
+  # FORMAT NOTE: disp_name is how it appears in Home Assistant. Keep it under 20 chars.
+  disp_name: "Energy Meter"
+  # CRITICAL: devicename MUST be lowercase, no spaces, and no special characters.
+  # This acts as the network hostname (energymeter.local).
+  devicename: energymeter
+  # POLL RATE: 2s provides real-time data while protecting storage longevity.
+  update_time: 2s 
+
+packages:
+  # This pulls in your centralized WiFi and API settings. 
+  # Ensure base-config.yaml is in the same directory as this file.
+  remote_base: !include base-config.yaml
+
+esp32:
+  board: nodemcu-32s
+
+wifi:
+  # CRITICAL: If using a Static IP, ensure 'use_address' matches 'static_ip'.
+  # This tells the ESPHome Dashboard exactly where to find the device.
+  # If you are changing the IP set the 'use_address' to the old IP, then update
+  # it to the new IP once the device has been flashed. 
+  # Comment out using # if you are using DHCP and mDNS
+  use_address: 192.168.1.10
+  manual_ip:
+    static_ip: 192.168.1.10
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+  reboot_timeout: 0s
+
+# SPI Bus Configuration (Required for ATM90E32 communication)
+spi:
+  clk_pin: 18
+  miso_pin: 19
+  mosi_pin: 23
+
+sensor:
+  # -----------------------------------------------------------------------
+  # CHIP 1: MAIN GRID POWER (Phases A & C)
+  # -----------------------------------------------------------------------
+  - platform: atm90e32
+    cs_pin: 5
+    phase_a:
+      voltage:
+        name: "${disp_name} Volts 1"
+        accuracy_decimals: 1
+      current:
+        id: "ct1Amps"
+        name: "${disp_name} CT1 Amps"
+      power:
+        id: "ct1Watts"
+        name: "${disp_name} CT1 Watts"
+        accuracy_decimals: 1
+        filters:
+          - multiply: -1.0 # Nuance: If Watts show as negative while consuming, change to 1.0
+          - or:
+              - delta: 5.0      # Data Throttling: Prevents DB bloat in Home Assistant
+              - heartbeat: 10s  # Proof of Life: Ensures the graph never "flatlines"
+      # CALIBRATION NOTE: These values are hardware-specific. 
+      # A specialized "Calibration Prompt" to calculate these for your specific 
+      # hardware can be found in the original MuttMutt Home GitHub Repository.
+      gain_voltage: 4096  
+      gain_ct: 39473      
+    phase_c:
+      current:
+        id: "ct2Amps"
+        name: "${disp_name} CT2 Amps"
+      power:
+        id: "ct2Watts"
+        name: "${disp_name} CT2 Watts"
+        accuracy_decimals: 1
+        filters:
+          - or:
+              - delta: 5.0
+              - heartbeat: 10s
+      gain_voltage: 4096
+      gain_ct: 39473
+    line_frequency: 60Hz
+    gain_pga: 2X
+    update_interval: ${update_time}
+
+  # -----------------------------------------------------------------------
+  # CHIP 2: SOLAR PRODUCTION (Phases A & C)
+  # -----------------------------------------------------------------------
+  - platform: atm90e32
+    cs_pin: 4
+    phase_a:
+      voltage:
+        name: "${disp_name} Volts 2"
+        accuracy_decimals: 1
+      current:
+        id: "ct3Amps"
+        name: "${disp_name} CT3 Amps"
+      power:
+        id: "ct3Watts"
+        name: "${disp_name} CT3 Watts"
+        accuracy_decimals: 1
+        filters:
+          - multiply: -1.0
+          - or:
+              - delta: 2.0      # Nuance: Solar is set more sensitive to catch cloud shadows
+              - heartbeat: 10s
+      gain_voltage: 3971
+      gain_ct: 36929
+    phase_c:
+      current:
+        id: "ct4Amps"
+        name: "${disp_name} CT4 Amps"
+      power:
+        id: "ct4Watts"
+        name: "${disp_name} CT4 Watts"
+        accuracy_decimals: 1
+        filters:
+          - or:
+              - delta: 2.0
+              - heartbeat: 10s
+      gain_voltage: 3971
+      gain_ct: 37284
+    line_frequency: 60Hz
+    gain_pga: 2X
+    update_interval: ${update_time}
+
+  # -----------------------------------------------------------------------
+  # TOTALS: Template sensors for calculating combined Phase Amps and Watts
+  # -----------------------------------------------------------------------
+  - platform: template
+    name: "${disp_name} Total Amps 1"
+    id: "totalAmps" # Required for Internal referencing
+    lambda: return id(ct1Amps).state + id(ct2Amps).state;
+    accuracy_decimals: 2
+    unit_of_measurement: A
+    icon: "mdi:current-ac"
+    update_interval: ${update_time}
+
+  - platform: template
+    name: "${disp_name} Total Watts 1"
+    id: "totalWatts"
+    lambda: return id(ct1Watts).state + id(ct2Watts).state;
+    accuracy_decimals: 0
+    unit_of_measurement: W
+    icon: "mdi:lightning-bolt-outline"
+    update_interval: ${update_time}
+
+  - platform: template
+    name: "${disp_name} Total Amps 2"
+    id: "totalAmps2"
+    lambda: return id(ct3Amps).state + id(ct4Amps).state;
+    accuracy_decimals: 2
+    unit_of_measurement: A
+    icon: "mdi:current-ac"
+    update_interval: ${update_time}
+
+  - platform: template
+    name: "${disp_name} Total Watts 2"
+    id: "totalWatts2"
+    lambda: return id(ct3Watts).state + id(ct4Watts).state;
+    accuracy_decimals: 0
+    unit_of_measurement: W
+    icon: "mdi:lightning-bolt-outline"
+    update_interval: ${update_time}
+
+  # -----------------------------------------------------------------------
+  # ENERGY DASHBOARD: Required for long-term kWh tracking in Home Assistant
+  # -----------------------------------------------------------------------
+  - platform: total_daily_energy
+    name: "${disp_name} Total kWh 1"
+    power_id: totalWatts
+    filters: [multiply: 0.001] # Converts Watts to kiloWatt-hours
+    unit_of_measurement: kWh
+    icon: "mdi:transmission-tower"
+
+  - platform: total_daily_energy
+    name: "${disp_name} Total kWh 2"
+    power_id: totalWatts2
+    filters: [multiply: 0.001]
+    unit_of_measurement: kWh
+    icon: "mdi:solar-power"
