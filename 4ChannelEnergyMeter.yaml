@@ -10,32 +10,25 @@
 # =========================================================================
 
 substitutions:
-  # FORMAT NOTE: disp_name is how it appears in Home Assistant. Keep it under 20 chars.
   disp_name: "Energy Meter"
-  # CRITICAL: devicename MUST be lowercase, no spaces, and no special characters.
-  # This acts as the network hostname (energymeter.local).
   devicename: energymeter
-  # POLL RATE: 2s provides real-time data while protecting storage longevity.
   update_time: 2s 
 
 packages:
-  # This pulls in your centralized WiFi and API settings. 
-  # Ensure base-config.yaml is in the same directory as this file.
   remote_base: !include base-config.yaml
 
 esp32:
   board: nodemcu-32s
+  # FRAMEWORK UPGRADE: Explicitly setting ESP-IDF to silence warnings
+  # and take advantage of faster compile times and better performance.
+  framework:
+    type: esp-idf
 
 wifi:
-  # CRITICAL: If using a Static IP, ensure 'use_address' matches 'static_ip'.
-  # This tells the ESPHome Dashboard exactly where to find the device.
-  # If you are changing the IP set the 'use_address' to the old IP, then update
-  # it to the new IP once the device has been flashed. 
-  # Comment out using # if you are using DHCP and mDNS
-  use_address: 192.168.1.10
+  use_address: 10.96.69.10
   manual_ip:
-    static_ip: 192.168.1.10
-    gateway: 192.168.1.1
+    static_ip: 10.96.69.10
+    gateway: 10.96.69.1
     subnet: 255.255.255.0
   reboot_timeout: 0s
 
@@ -63,13 +56,10 @@ sensor:
         name: "${disp_name} CT1 Watts"
         accuracy_decimals: 1
         filters:
-          - multiply: -1.0 # Nuance: If Watts show as negative while consuming, change to 1.0
+          - multiply: -1.0 
           - or:
-              - delta: 5.0      # Data Throttling: Prevents DB bloat in Home Assistant
-              - heartbeat: 10s  # Proof of Life: Ensures the graph never "flatlines"
-      # CALIBRATION NOTE: These values are hardware-specific. 
-      # A specialized "Calibration Prompt" to calculate these for your specific 
-      # hardware can be found in the original MuttMutt Home GitHub Repository.
+              - delta: 5.0      
+              - heartbeat: 10s  
       gain_voltage: 4096  
       gain_ct: 39473      
     phase_c:
@@ -84,7 +74,7 @@ sensor:
           - or:
               - delta: 5.0
               - heartbeat: 10s
-      gain_voltage: 4096
+      gain_voltage: 4066
       gain_ct: 39473
     line_frequency: 60Hz
     gain_pga: 2X
@@ -109,7 +99,7 @@ sensor:
         filters:
           - multiply: -1.0
           - or:
-              - delta: 2.0      # Nuance: Solar is set more sensitive to catch cloud shadows
+              - delta: 2.0      
               - heartbeat: 10s
       gain_voltage: 3971
       gain_ct: 36929
@@ -125,18 +115,18 @@ sensor:
           - or:
               - delta: 2.0
               - heartbeat: 10s
-      gain_voltage: 3971
+      gain_voltage: 4004
       gain_ct: 37284
     line_frequency: 60Hz
     gain_pga: 2X
     update_interval: ${update_time}
 
   # -----------------------------------------------------------------------
-  # TOTALS: Template sensors for calculating combined Phase Amps and Watts
+  # TOTALS: Template sensors 
   # -----------------------------------------------------------------------
   - platform: template
     name: "${disp_name} Total Amps 1"
-    id: "totalAmps" # Required for Internal referencing
+    id: "totalAmps" 
     lambda: return id(ct1Amps).state + id(ct2Amps).state;
     accuracy_decimals: 2
     unit_of_measurement: A
@@ -171,12 +161,12 @@ sensor:
     update_interval: ${update_time}
 
   # -----------------------------------------------------------------------
-  # ENERGY DASHBOARD: Required for long-term kWh tracking in Home Assistant
+  # ENERGY DASHBOARD: kWh tracking
   # -----------------------------------------------------------------------
   - platform: total_daily_energy
     name: "${disp_name} Total kWh 1"
     power_id: totalWatts
-    filters: [multiply: 0.001] # Converts Watts to kiloWatt-hours
+    filters: [multiply: 0.001] 
     unit_of_measurement: kWh
     icon: "mdi:transmission-tower"
 
