@@ -26,12 +26,15 @@ esp8266:
   board: esp12e
 
 # -----------------------------------------------------------------------
-# NETWORK: DHCP Configuration
+# NETWORK: Manual Configuration - Comment out after wifi: to use DHCP
 # -----------------------------------------------------------------------
 wifi:
-  # No manual_ip block means the device will request an IP via DHCP
-  # Fallback AP is handled by the base-config package
-
+  use_address: 192.168.1.10
+  manual_ip:
+    static_ip: 192.168.1.10
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+  reboot_timeout: 0s
 # -----------------------------------------------------------------------
 # SENSORS: DHT Temperature & Humidity
 # -----------------------------------------------------------------------
