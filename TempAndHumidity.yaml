@@ -57,26 +57,6 @@ sensor:
       accuracy_decimals: 0
     update_interval: ${update_time}
 
-# -----------------------------------------------------------------------
-# DIAGNOSTICS: WiFi Health (Standardized)
-# -----------------------------------------------------------------------
-  - platform: wifi_signal
-    name: "${disp_name} WiFi Signal dB"
-    id: wifi_signal_db
-    update_interval: 60s
-    entity_category: "diagnostic"
-    icon: "mdi:wifi-arrow-left-right"
-    filters:
-      - sliding_window_moving_average:
-          window_size: 15
-          send_every: 15
 
-  - platform: copy
-    source_id: wifi_signal_db
-    name: "${disp_name} WiFi Signal Percent"
-    filters:
-      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
-    unit_of_measurement: "%"
-    device_class: "signal_strength"
     entity_category: "diagnostic"
     icon: "mdi:wifi-strength-4"
