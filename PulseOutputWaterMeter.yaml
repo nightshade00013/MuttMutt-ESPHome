@@ -1,0 +1,187 @@
+# =========================================================================
+# PROJECT: MuttMutt Outdoors - DAE AS200U-75P Water Monitor
+# HARDWARE: ESP8266 + DAE Pulse Meter (1 Pulse = 1 Gallon)
+#
+# There will be a page at www.muttmutt.us in the coming months to show how 
+# this water meter was created for those who need it.  You can simply look up
+# the meter yourself or consider using the following Amazon Affiliate Link to
+# purchase one and show your support https://amzn.to/4t9zt4q
+#
+# This project will allow you to use a water meter with a pulse output to 
+# interface with a device like an ESP8266 to monitor your water usage seperate 
+# from a utility provided "revenue" meter.  This can be useful in a MDU (Multiple Dwelling Unit)
+# where there is a single revenue water meter so that you can properly divide the usage between 
+# multiple units.  It can also be used as a secondary meter to a revenue meter
+# to establish your own logs and reporting as well as to support your case if the 
+# revenue meter is malfunctioning.  You can also use this to monitor water usage
+# on different parts of your property and detect potential leaks with a simple 
+# piezo electric PC speaker as a warning.
+#
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+#
+# =========================================================================
+substitutions:
+  disp_name: "Water Meter"
+  devicename: water-meter
+  update_time: 2s 
+
+packages:
+  remote_base: !include base-config.yaml
+
+esp8266:
+  board: esp12e
+  restore_from_flash: true
+
+globals:
+  # Odometer (Lifetime)
+  - id: total_gallons
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  # Daily Bucket
+  - id: daily_gallons
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+
+wifi:
+  use_address: 192.168.1.11
+  manual_ip:
+    static_ip: 192.168.1.11
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+
+# -----------------------------------------------------------------------
+# TIME-BASED RESET: Clears the Daily Bucket at Midnight
+# -----------------------------------------------------------------------
+time:
+  - platform: homeassistant
+    on_time:
+      - seconds: 0
+        minutes: 0
+        hours: 0
+        then:
+          - lambda: id(daily_gallons) = 0.0;
+          - component.update: daily_consumption_sensor
+
+sensor:
+  - platform: pulse_meter
+    pin:
+      number: GPIO14 #The GPIO of the water meter pulse.  This may require a "pullup resistor" between 2.2kΩ and 10kΩ.
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    name: "${disp_name} Flow"
+    id: water_pulse
+    unit_of_measurement: "gal/min"
+    icon: "mdi:water-speedometer"
+    device_class: volume_flow_rate
+    state_class: measurement
+    internal_filter: 50ms
+    timeout: 1min
+    
+    total:
+      id: raw_total
+      internal: true
+      # Logic: For every 1 pulse, increment both the Lifetime and Daily globals by 1.0
+      on_value:
+        then:
+          - lambda: |-
+              static float last_val = 0;
+              if (x > last_val) {
+                float change = x - last_val;
+                id(total_gallons) += change;
+                id(daily_gallons) += change;
+              }
+              last_val = x;
+
+  # -----------------------------------------------------------------------
+  # DISPLAY SENSORS: What Home Assistant sees
+  # -----------------------------------------------------------------------
+  - platform: template
+    name: "${disp_name} Lifetime Total"
+    id: persistent_total
+    unit_of_measurement: "gal"
+    device_class: water
+    state_class: total_increasing
+    accuracy_decimals: 0
+    icon: "mdi:faucet"
+    lambda: return id(total_gallons);
+    update_interval: ${update_time}
+
+  - platform: template
+    name: "${disp_name} Daily Consumption"
+    id: daily_consumption_sensor
+    unit_of_measurement: "gal"
+    device_class: water
+    state_class: total_increasing
+    accuracy_decimals: 0
+    icon: "mdi:water-sync"
+    lambda: return id(daily_gallons);
+    update_interval: ${update_time}
+
+# -----------------------------------------------------------------------
+# DIAGNOSTICS & ALARMS
+# -----------------------------------------------------------------------
+  - platform: wifi_signal
+    name: "${disp_name} WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+    icon: "mdi:wifi-arrow-left-right"
+
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "${disp_name} WiFi Signal Percent"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    device_class: "signal_strength"
+    entity_category: "diagnostic"
+    icon: "mdi:wifi-strength-4"
+
+output:
+  - platform: esp8266_pwm
+    pin: GPIO12 #The default pin for the piezo electric speaker
+    id: buzzer_pwm
+
+rtttl:
+  output: buzzer_pwm
+
+binary_sensor:
+  - platform: template
+    name: "${disp_name} Leak Alert"
+    id: water_leak_alert
+    device_class: problem 
+    lambda: |-
+      if (id(water_pulse).state > 0) {
+        return true;
+      } else {
+        return false;
+      }
+    filters:
+      - delayed_on: 30min
+      - delayed_off: 1s
+    icon: "mdi:water-alert"
+    on_press:
+      then:
+        - rtttl.play: "alarm:d=8,o=5,b=100:4e,4p,4e,4p,4e,4p"
+    on_release:
+      then:
+        - rtttl.stop:
+
+  - platform: gpio
+    pin:
+      number: GPIO0 # select a GPIO for your button
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    name: "${disp_name} Alarm Mute"
+    icon: "mdi:bell-off"
+    on_press:
+      then:
+        - rtttl.stop:
+        - logger.log: "Alarm manually muted via local button"
