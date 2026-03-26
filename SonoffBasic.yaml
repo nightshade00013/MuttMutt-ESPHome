@@ -1,0 +1,61 @@
+# =========================================================================
+# PROJECT: MuttMutt Outdoors - UV Blacklight Controller
+# PURPOSE: Remote Switch & Physical Button Control
+# HARDWARE: ESP-01 (1MB) / ESP8266 + Relay
+#
+# This is the code used for many of the ESP8266 based Sonoff Basic and clone devices
+# The same code can be used by simply putting a switch, power supply, and low voltage
+# or solid state relay in a package with an ESP 8266 connected.
+#
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+#
+# =========================================================================
+
+substitutions:
+  disp_name: "Sonoff Basic"
+  devicename: sonoff-basic
+
+packages:
+  # Inherits centralized WiFi, API, and OTA from base-config.yaml
+  remote_base: !include base-config.yaml
+
+esp8266:
+  board: esp01_1m
+
+# -----------------------------------------------------------------------
+# NETWORK: DHCP Configuration
+# -----------------------------------------------------------------------
+wifi:
+  # DHCP is active by default as no manual_ip is defined here.
+
+# -----------------------------------------------------------------------
+# CONTROLS: Relay & Physical Button
+# -----------------------------------------------------------------------
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "${disp_name} Button"
+    id: physical_button
+    on_press:
+      - switch.toggle: relay
+
+switch:
+  - platform: gpio
+    name: "${disp_name}"
+    pin: GPIO12
+    id: relay
+    icon: "mdi:switch"
+    # Safety: Set a restore mode so it remembers its state after power flickers
+    restore_mode: RESTORE_DEFAULT_OFF # This can be set to ON from OFF so that it powers up when turned on.
+
+# -----------------------------------------------------------------------
+# STATUS & DIAGNOSTICS
+# -----------------------------------------------------------------------
+status_led:
+  pin:
+    number: GPIO13
+    inverted: yes # You can change this so that the LED is lit when off by changing inverted to no.
