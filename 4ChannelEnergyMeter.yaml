@@ -28,10 +28,10 @@ esp32:
     type: esp-idf
 
 wifi:
-  use_address: 10.96.69.10
+  use_address: 192.168.1.10
   manual_ip:
-    static_ip: 10.96.69.10
-    gateway: 10.96.69.1
+    static_ip: 192.168.1.10
+    gateway: 192.168.1.1
     subnet: 255.255.255.0
   reboot_timeout: 0s
 
