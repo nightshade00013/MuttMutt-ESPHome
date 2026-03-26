@@ -40,7 +40,8 @@ Starting with the 2026.1.0 release, all ESP32 devices in this repository (such a
 | `Example-Secrets.yaml` | Core Package | Shared | Centralized Secrets file. |
 | `4ChannelEnergyMeter.yaml` | Energy Meter | ESP32 + ATM90E32 | Real-time Grid & Solar monitoring (CT Clamps). |
 | `PulseOutputWaterMeter.yaml` | Water Meter | ESP8266 + DAE AS200U-75P | Real-time flow and persistent lifetime totals. |
-| `DIYElectricWaterHeaterController.yaml` | **Water Heater** | ESP8266 + DS18B20 | Dual-element temperature monitoring and relay control. |
+| `DIYElectricWaterHeaterController.yaml` | Water Heater | ESP8266 + DS18B20 | Dual-element temperature monitoring and relay control. |
+| `TempAndHumidity.yaml` | Temp and Humidity | ESP8266 + DHT Sensor | Simple Temperature and Humidity Sensor. |
 
 ---
 
