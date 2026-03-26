@@ -1,0 +1,81 @@
+# =========================================================================
+# PROJECT: MuttMutt Home - RGBW Bulb
+# PURPOSE: Ambient Lighting & Video-Safe PWM (Flicker-Free)
+# HARDWARE: ESP-01 (1MB) / ESP8266 PWM
+#
+# This is for a generic ESP8266 controlled RGB Bulb, they were likely made by Tuya
+# but were able to be converted to ESPHome using Tuya Convert.  These are set to come on
+# at 15 percent brightness in a red color to preserve night vision after a power outage.
+#
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+#
+# =========================================================================
+
+substitutions: #
+  disp_name: "RGBW Bulb"
+  devicename: rgbw-bulb
+packages:
+  # Inherits centralized WiFi (WPA2), API, and OTA from base-config.yaml
+  remote_base: !include base-config.yaml
+
+esphome:
+  on_boot: #Remove this section to leave the bulbs off on power restoration.
+    # Priority 600 ensures light turns Red immediately upon power restoration
+    priority: 600
+    then: 
+      - light.turn_on: # Adjust Brightness and color to your liking.
+          id: bulb_light
+          brightness: 15% 
+          red: 100%
+          green: 0%
+          blue: 0%
+          white: 0%
+
+esp8266:
+  board: esp01_1m
+
+# -----------------------------------------------------------------------
+# NETWORK: Configuration Comment Out Below "wifi:" To Activate DHCP
+# -----------------------------------------------------------------------
+wifi:
+  use_address: 192.168.1.10
+  manual_ip:
+    static_ip: 192.168.1.10
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+  reboot_timeout: 0s
+# -----------------------------------------------------------------------
+# OUTPUTS: High-Frequency PWM (10kHz) for Video Stability
+# -----------------------------------------------------------------------
+output:
+  - platform: esp8266_pwm
+    id: output_red
+    pin: GPIO4
+    frequency: 10000 Hz
+  - platform: esp8266_pwm
+    id: output_green
+    pin: GPIO12
+    frequency: 10000 Hz
+  - platform: esp8266_pwm
+    id: output_blue
+    pin: GPIO14
+    frequency: 10000 Hz
+  - platform: esp8266_pwm
+    id: output_white
+    pin: GPIO5
+    frequency: 10000 Hz
+
+# -----------------------------------------------------------------------
+# LIGHT: RGBW Entity
+# -----------------------------------------------------------------------
+light:
+  - platform: rgbw
+    name: "${disp_name}"
+    id: bulb_light
+    red: output_red
+    green: output_green
+    blue: output_blue
+    white: output_white
+    # Ensures the light stays on/available after a reboot
+    restore_mode: ALWAYS_ON # Change ON to OFF to force off at boot.
