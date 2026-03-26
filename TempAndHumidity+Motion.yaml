@@ -1,0 +1,71 @@
+# =========================================================================
+# PROJECT: MuttMutt Home - Temp Humidity and Motion Sensors
+# PURPOSE: Environmental Monitoring & Motion Detection
+# HARDWARE: ESP8266 + DHT + PIR Motion Sensor
+#
+# This is a simple ESP8266 with a DHT and PIR Motion Sensor.  It can measure 
+# temperature, humidity, and detect motion where it's located.
+# Note:  PIR Sensors can behave badly in certain situations.  Ultrasonic Sensors
+# tend to be better in many situations.
+#
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+#
+# =========================================================================
+
+substitutions: # Change the names to suit your needs, keep it short.
+  disp_name: "Temp Humidity Motion" 
+  devicename: tmp-hmdt-mtn #Must be all lowercase
+  update_time: 60s 
+
+packages:
+  # Inherits centralized WiFi (WPA2), API, and OTA from base-config.yaml
+  remote_base: !include base-config.yaml
+
+esp8266:
+  board: esp12e
+
+# -----------------------------------------------------------------------
+# NETWORK: DHCP Configuration
+# -----------------------------------------------------------------------
+wifi:
+  # DHCP Active. Security & Diagnostics inherited from package.
+
+# -----------------------------------------------------------------------
+# SENSORS: DHT Temperature & Humidity
+# -----------------------------------------------------------------------
+sensor:
+  - platform: dht
+    model: AUTO_DETECT
+    pin: GPIO13
+    temperature:
+      name: "${disp_name} Temperature"
+      unit_of_measurement: "°F"
+      icon: "mdi:thermometer"
+      accuracy_decimals: 1
+      filters:
+        # Native conversion to Fahrenheit
+        - lambda: return (x * 1.8) + 32.0;
+    humidity:
+      name: "${disp_name} Humidity"
+      unit_of_measurement: "%"
+      icon: "mdi:water-percent"
+      accuracy_decimals: 0
+    update_interval: ${update_time}
+
+# -----------------------------------------------------------------------
+# BINARY SENSORS: Motion Detection with Debounce
+# -----------------------------------------------------------------------
+binary_sensor:
+  - platform: gpio
+    pin: GPIO14
+    name: "${disp_name} Motion"
+    device_class: motion
+    filters:
+      # DEBOUNCE LOGIC:
+      # The 'delayed_on' ensures the sensor must be HIGH for at least 200ms
+      # to count as a person. This filters out sun-glare "flicker".
+      - delayed_on: 200ms
+      # 'delayed_off' keeps the sensor "active" in HA for 5s after motion stops
+      # to prevent a "choppy" timeline in your security logs.
+      - delayed_off: 5s
