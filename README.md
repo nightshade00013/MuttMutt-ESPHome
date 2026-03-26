@@ -40,7 +40,7 @@ Starting with the 2026.1.0 release, all ESP32 devices in this repository (such a
 | `Example-Secrets.yaml` | Core Package | Shared | Centralized Secrets file. |
 | `4ChannelEnergyMeter.yaml` | Energy Meter | ESP32 + ATM90E32 | Real-time Grid & Solar monitoring (CT Clamps). |
 | `PulseOutputWaterMeter.yaml` | Water Meter | ESP8266 + DAE AS200U-75P | Real-time flow and persistent lifetime totals. |
-
+| `DIYElectricWaterHeaterController.yaml` | **Water Heater** | ESP8266 + DS18B20 | Dual-element temperature monitoring and relay control. |
 
 ---
 
@@ -54,6 +54,20 @@ Starting with the 2026.1.0 release, all ESP32 devices in this repository (such a
     * **Energy Meter:** Refer to `energy-meter-calibration-guide.md` to calculate your specific voltage and CT gains.
     * **Water Meter:** Set your `initial_value` in the `globals` section to match your physical meter dial.
 
+## 🌡️ Water Heater Controller (DIY)
+The `DIYElectricWaterHeaterController.yaml` is designed for high-current electric water heaters. It monitors three critical points to provide a complete picture of your thermal efficiency:
+
+* **Top Temperature:** Monitors the upper heating element zone.
+* **Bottom Temperature:** Monitors the lower heating element zone.
+* **Output Temperature:** Monitors the water temperature as it leaves the tank for the house.
+
+### **Safety First**
+* **Restore Mode:** The relay is set to `ALWAYS_OFF`. If the ESP8266 reboots or loses power, the heating element will not turn on automatically until commanded by Home Assistant.
+* **Inverted Logic:** Configured for standard active-low relay boards (common in DIY electronics).
+
+### **Hardware Pinout**
+* **GPIO04:** One-Wire Data Bus (requires a 4.7kΩ pull-up resistor).
+* **GPIO05:** Relay Control Output.
 ---
 
 ## 🎨 Dashboard Integration
