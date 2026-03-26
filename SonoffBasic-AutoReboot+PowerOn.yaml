@@ -1,0 +1,86 @@
+# =========================================================================
+# PROJECT: MuttMutt Home - Camera Always On Power Controller
+# PURPOSE: High-Availability Power for Always On Devices + Scheduled Reboot
+# HARDWARE: ESP-01 (1MB) / ESP8266 + Relay
+#
+# This is used in a Sonoff Basic but has some advanced functions.  It is useful
+# for something that needs to stay powered on but may need a daily reboot.  
+# I use this for my POE IP Camera's so that they get rebooted on a regular basiss
+# This is set to power on at boot in case of a power outage.
+#
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+#
+# =========================================================================
+
+
+substitutions: # Rename these as you choose, keep them short.
+  disp_name: "Sonoff Basic" 
+  devicename: sonoffbasic #Must be lowercase
+
+packages:
+  remote_base: !include base-config.yaml
+
+esphome:
+  on_boot:
+    priority: -10
+    then:
+      - delay: 10s
+      - switch.turn_on: relay
+
+esp8266:
+  board: esp01_1m
+
+# -----------------------------------------------------------------------
+# AUTOMATION: Scheduled Reboot (3:30 AM Daily)
+# -----------------------------------------------------------------------
+time:
+  - platform: homeassistant
+    on_time:
+      - seconds: 0
+        minutes: 30
+        hours: 3
+        then:
+          - script.execute: reboot_$devicename
+
+# -----------------------------------------------------------------------
+# REBOOT SCRIPT: Centralized logic for Power Cycling
+# -----------------------------------------------------------------------
+script:
+  - id: reboot_$devicename
+    mode: restart # If triggered twice, it just starts the timer over
+    then:
+      - logger.log: "{disp_name} Reboot Sequence Started..."
+      - switch.turn_off: relay
+      - delay: 10s
+      - switch.turn_on: relay
+      - logger.log: "{disp_name} Power Restored."
+
+# -----------------------------------------------------------------------
+# CONTROLS: Relay & Physical Reboot Button
+# -----------------------------------------------------------------------
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "${disp_name} Reboot Button"
+    id: physical_button
+    on_press:
+      # Instead of toggling, we call the script. 
+      # A second press during the 10s window will just restart the 10s timer.
+      - script.execute: reboot_$devicename
+
+switch:
+  - platform: gpio
+    name: "${disp_name} Relay"
+    id: relay
+    pin: GPIO12
+    icon: "mdi:switch"
+    restore_mode: ALWAYS_ON
+
+status_led:
+  pin:
+    number: GPIO13
+    inverted: yes
