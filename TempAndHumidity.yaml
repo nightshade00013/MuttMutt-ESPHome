@@ -1,0 +1,79 @@
+# =========================================================================
+# PROJECT: MuttMutt Home - Environment Sensors
+# PURPOSE: Temperature and Humidity Monitoring
+# HARDWARE: ESP8266 (ESP-12E) + DHT Sensor
+#
+# This is a simple ESP Board with a DHT sensor to measure temperature and 
+# humidity.  You can easily add other things including motion sensors, light
+# sensors or just about anything else that you can get a sensor compatible with
+# arduino.
+#
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+#
+# =========================================================================
+
+substitutions:
+  disp_name: "TempHumidSensor" #Can be uppercase or lowercase
+  devicename: temphumidsensor #Must be lowercase
+  update_time: 60s 
+
+packages:
+  # Inherits centralized WiFi credentials, API keys, and OTA settings
+  remote_base: !include base-config.yaml
+
+esp8266:
+  board: esp12e
+
+# -----------------------------------------------------------------------
+# NETWORK: DHCP Configuration
+# -----------------------------------------------------------------------
+wifi:
+  # No manual_ip block means the device will request an IP via DHCP
+  # Fallback AP is handled by the base-config package
+
+# -----------------------------------------------------------------------
+# SENSORS: DHT Temperature & Humidity
+# -----------------------------------------------------------------------
+sensor:
+  - platform: dht
+    model: AUTO_DETECT
+    pin: GPIO13
+    temperature:
+      name: "${disp_name} Temperature"
+      unit_of_measurement: "°F"
+      icon: "mdi:thermometer"
+      accuracy_decimals: 1
+      filters:
+        # Calibration: Celsius to Fahrenheit conversion + 32 plus or minus temp offset
+        - lambda: return (x * 1.8) + 32.0;
+    humidity:
+      name: "${disp_name} Humidity"
+      unit_of_measurement: "%"
+      icon: "mdi:water-percent"
+      accuracy_decimals: 0
+    update_interval: ${update_time}
+
+# -----------------------------------------------------------------------
+# DIAGNOSTICS: WiFi Health (Standardized)
+# -----------------------------------------------------------------------
+  - platform: wifi_signal
+    name: "${disp_name} WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+    icon: "mdi:wifi-arrow-left-right"
+    filters:
+      - sliding_window_moving_average:
+          window_size: 15
+          send_every: 15
+
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "${disp_name} WiFi Signal Percent"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    device_class: "signal_strength"
+    entity_category: "diagnostic"
+    icon: "mdi:wifi-strength-4"
