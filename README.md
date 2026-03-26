@@ -42,7 +42,9 @@ Starting with the 2026.1.0 release, all ESP32 devices in this repository (such a
 | `PulseOutputWaterMeter.yaml` | Water Meter | ESP8266 + DAE AS200U-75P | Real-time flow and persistent lifetime totals. |
 | `DIYElectricWaterHeaterController.yaml` | Water Heater | ESP8266 + DS18B20 | Dual-element temperature monitoring and relay control. |
 | `TempAndHumidity.yaml` | Temp and Humidity | ESP8266 + DHT Sensor | Simple Temperature and Humidity Sensor. |
-
+| `SonoffBasic.yaml` | Simple on off relay | ESP8266 + Relay | This is one of the Sonoff Basic's or one of the clones. |
+| `SonoffBasic-AutoReboot+PowerOn.yaml` | Simple on off relay | ESP8266 + Relay | High-Availability Power for Always On Devices + Scheduled Reboot |
+| `TempAndHumidity+Motion.yaml` | Temp and Humidity + Motion | ESP8266 + DHT + PIR Motion Sensor | Environmental Monitoring & Motion Detection |
 ---
 
 ## 📋 Installation & Setup
