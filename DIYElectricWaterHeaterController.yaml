@@ -84,26 +84,6 @@ sensor:
     filters:
       - lambda: return x * (9.0/5.0) + 32.0; # This is the conversion from °C to °F and can also be used for calibration
 
-# -----------------------------------------------------------------------
-# DIAGNOSTICS: WiFi Health (Standard across your fleet)
-# -----------------------------------------------------------------------
-  - platform: wifi_signal
-    name: "${disp_name} WiFi Signal dB"
-    id: wifi_signal_db
-    update_interval: 60s
-    entity_category: "diagnostic"
-    icon: "mdi:wifi-arrow-left-right"
-
-  - platform: copy
-    source_id: wifi_signal_db
-    name: "${disp_name} WiFi Signal Percent"
-    filters:
-      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
-    unit_of_measurement: "%"
-    device_class: "signal_strength"
-    entity_category: "diagnostic"
-    icon: "mdi:wifi-strength-4"
-    
 
 # -----------------------------------------------------------------------
 # CONTROLS: Heating Element Relay
