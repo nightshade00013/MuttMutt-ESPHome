@@ -5,8 +5,11 @@
 # https://circuitsetup.us/product/split-single-phase-real-time-whole-house-energy-meter-solar-kit-2-energy-meters-programmed-esp32-4-cts/?v=0b3b97fa6688
 # You may need to calibrate your voltages based on the power supply used.
 # There will be a calibration help prompt included with the repository.
+# The prompt is located in the: Energy-Meter-Calibration-Guide.md
+#
 # You can show your thanks for this by heading over to:
 # https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+#
 # =========================================================================
 
 substitutions:
