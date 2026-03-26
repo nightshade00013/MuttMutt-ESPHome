@@ -1,3 +1,4 @@
+################# Base-Configuration-File #########################
 # NOTE: This is the global configuration for all MuttMutt Home devices.
 # Changing a setting here updates every device that includes this package.
 # This file also relies on a secrets file.  If you are using the HomeAssistant 
@@ -6,6 +7,13 @@
 # repository.  
 # 
 # https://github.com/nightshade00013/MuttMutt-ESPHome
+#
+# You can simply download or copy and paste the contents of this file into
+# an ESPHome Builder file named base-config.yaml
+#
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+#####################################################################
 
 esphome:
   # This ensures the device name is always what we set in the 'substitutions' block
