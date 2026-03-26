@@ -1,0 +1,120 @@
+# =========================================================================
+# PROJECT: MuttMutt Home - Water Heater Controller
+# PURPOSE: Water Heater Monitoring & Relay Control
+# HARDWARE: ESP8266 (ESP-12E) + DS18B20 One-Wire Sensors + Solid State Relay or Contactor
+#
+# This allows you to turn a dumb electric water heater into a HomeAssistant smart 
+# water heater.  The three DS18B20's are placed inside the insulation directly against 
+# the tank wall near the top and bottom of the tank as well as on the output line approx
+# 2 feet from the tank with some insulation around it so that it can monitor the output temperature.
+# By monitoring the output we can then have HomeAssistant "turn up" the temperature if desired.
+# Be sure you use a Solid State Relay that is rated beyond your water heater and that it
+# has a large heatsink with a fan.  You can also use a contactor but you will need to either find 
+# a contactor that supports low voltage control, or create a circuit that will allow you to control it with
+# low voltage.
+#
+# WARNING:  Working with Electricity is DANGEROUS.  If you do not understand what you are doing DON'T ATTEMPT THIS PROJECT
+#
+# You can show your thanks for this by heading over to:
+# https://www.muttmutt.us/your-welcome-here-is-how-you-can-say-thank-you/
+# The above link also includes affiliate links to Amazon that you can use to help support the DogHouse Diving Foundation
+# =========================================================================
+
+substitutions:
+  disp_name: "Water Heater"
+  devicename: water-heater
+  update_time: 60s 
+
+packages:
+  # Pulls in centralized WiFi, API, and OOTA from your core file
+  remote_base: !include base-config.yaml
+
+esp8266:
+  board: esp12e
+
+# -----------------------------------------------------------------------
+# NETWORK: Static IP Configuration
+# -----------------------------------------------------------------------
+wifi:
+  use_address: 192.168.1.12  # Assigned next in your logical IP sequence
+  manual_ip:
+    static_ip: 192.168.1.12
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+
+# -----------------------------------------------------------------------
+# HARDWARE BUS: One-Wire for Dallas Sensors
+# -----------------------------------------------------------------------
+one_wire:
+  - platform: gpio
+    pin: GPIO04
+
+# -----------------------------------------------------------------------
+# SENSORS: Temperature Monitoring
+# -----------------------------------------------------------------------
+sensor:
+  - platform: dallas_temp
+    address: 0x5f3c01f0964a4428 # This is a unique ID, this will need to be updated on first boot
+    name: "${disp_name} Top Temp"
+    unit_of_measurement: "°F" # You can change this to °C if you prefer then comment out the filters below with #
+    icon: "mdi:thermometer-high"
+    accuracy_decimals: 1
+    update_interval: ${update_time}
+    filters:
+      - lambda: return x * (9.0/5.0) + 32.0; # This is the conversion from °C to °F and can also be used for calibration
+
+  - platform: dallas_temp
+    address: 0x7d3c01f096e5de28 # This is a unique ID, this will need to be updated on first boot
+    name: "${disp_name} Bottom Temp"
+    unit_of_measurement: "°F" # You can change this to °C if you prefer then comment out the filters below with #
+    icon: "mdi:thermometer-low"
+    accuracy_decimals: 1
+    update_interval: ${update_time} 
+    filters:
+      - lambda: return x * (9.0/5.0) + 32.0; # This is the conversion from °C to °F and can also be used for calibration
+
+
+  - platform: dallas_temp
+    address: 0x1e3c01f096a37328 # This is a unique ID, this will need to be updated on first boot
+    name: "${disp_name} Output Temp"
+    unit_of_measurement: "°F" # You can change this to °C if you prefer then comment out the filters below with #
+    icon: "mdi:water-thermometer"
+    accuracy_decimals: 1
+    update_interval: ${update_time}
+    filters:
+      - lambda: return x * (9.0/5.0) + 32.0; # This is the conversion from °C to °F and can also be used for calibration
+
+# -----------------------------------------------------------------------
+# DIAGNOSTICS: WiFi Health (Standard across your fleet)
+# -----------------------------------------------------------------------
+  - platform: wifi_signal
+    name: "${disp_name} WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+    icon: "mdi:wifi-arrow-left-right"
+
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "${disp_name} WiFi Signal Percent"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    device_class: "signal_strength"
+    entity_category: "diagnostic"
+    icon: "mdi:wifi-strength-4"
+    
+
+# -----------------------------------------------------------------------
+# CONTROLS: Heating Element Relay
+# -----------------------------------------------------------------------
+switch:
+  - platform: gpio
+    name: "${disp_name} Relay"
+    id: relay
+    pin: GPIO05
+    inverted: yes
+    icon: "mdi:water-boiler"
+    # Safety: Ensure relay stays off if the ESP reboots unexpectedly
+    restore_mode: ALWAYS_OFF 
+
